@@ -1,0 +1,113 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Your Name <you@example.com>
+Date: Tue, 28 Aug 2024 00:00:00 +0000
+Subject: [PATCH] Add binary sorting functionality for clients
+
+---
+ config.h             |  1 +
+ dwm.c                | 48 +++++++++++++++++++++++++++++++++++++++++++++++---
+ dwm.h                |  4 ++++
+ 3 files changed, 50 insertions(+), 2 deletions(-)
+
+diff --git a/config.h b/config.h
+index abcdef1..1234567 100644
+--- a/config.h
++++ b/config.h
+@@ -22,6 +22,7 @@
+ #define TAGGING 1
+ #define SHOWBAR 1
+ #define TOPBAR 1
++#define BINARY_SORT 1
+ #define MODKEY Mod1Mask
+ #define TERMINAL "st"
+diff --git a/dwm.c b/dwm.c
+index 1234567..abcdef1 100644
+--- a/dwm.c
++++ b/dwm.c
+@@ -22,6 +22,8 @@
+ #include "drw.h"
+ #include "dwm.h"
+ 
++/* Function prototypes */
++int compare(Client *c1, Client *c2);
+ 
+ void
+ attach(Client *c)
+@@ -45,6 +47,7 @@ attach(Client *c)
+     if (c->mon->sel == NULL || c->mon->sel == c || c->mon->sel->isfloating) {
+         /* Normal attachment */
+         c->next = c->mon->clients;
+@@ -52,13 +55,52 @@ attach(Client *c)
+         if (c->mon->clients)
+             c->mon->clients->prev = c;
+         c->mon->clients = c;
+-    } else {
+-        /* Binary sorting */
+-        binary_sort(c);
++        return;
++    }
+ 
++#if BINARY_SORT
++    /* Binary sorting */
++    binary_sort(c);
++#else
++    /* Default sorting */
++    attach(c);
++#endif
+}
+ 
++void
++binary_sort(Client *c) {
++    if (c->mon->clients == NULL) {
++        c->mon->clients = c;
++        c->next = NULL;
++        c->prev = NULL;
++        return;
++    }
++
++    Client *start = c->mon->clients;
++    Client *end = NULL;
++    while (start != end) {
++        Client *mid = start;
++        for (int i = 0; mid->next != end && i < (end ? 2 : 1); i++) {
++            mid = mid->next;
++        }
++        if (compare(c, mid) < 0) {
++            end = mid;
++        } else {
++            start = mid->next;
++        }
++    }
++
++    if (start == c->mon->clients) {
++        c->next = start;
++        if (start) {
++            start->prev = c;
++        }
++        c->mon->clients = c;
++    } else {
++        c->prev = start->prev;
++        c->next = start;
++        start->prev->next = c;
++        start->prev = c;
++    }
++    c->mon->sel = c; /* Optionally select the new client */
++}
++
+ int
+ compare(Client *c1, Client *c2) {
+     if (c1->x < c2->x) return -1;
+     if (c1->x > c2->x) return 1;
+     return 0;
+ }
+ 
+ void
+ detach(Client *c)
+ {
+@@ -103,6 +144,12 @@ detach(Client *c)
+     c->next = NULL;
+     c->prev = NULL;
+ }
+ 
+ void
+ focus(Client *c)
