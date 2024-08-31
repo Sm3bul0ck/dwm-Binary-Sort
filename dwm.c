@@ -94,6 +94,7 @@ struct Client {
 	unsigned int tags;
 	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
 	Client *next;
+	struct Client *prev;
 	Client *snext;
 	Monitor *mon;
 	Window win;
